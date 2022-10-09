@@ -144,7 +144,9 @@ class RowMatrix : public Matrix<T> {
    * @throws OUT_OF_RANGE if either index is out of range
    */
   T GetElement(int i, int j) const override {
-    if (i >= 0 && i < GetRowCount() && j >= 0 && j < GetColumnCount()) return data_[i][j];
+    if (i >= 0 && i < GetRowCount() && j >= 0 && j < GetColumnCount()) {
+      return data_[i][j];
+    }
     throw Exception(ExceptionType::OUT_OF_RANGE, "out of range!");
   }
 
@@ -184,8 +186,11 @@ class RowMatrix : public Matrix<T> {
     }
 
     int cnt = 0;
-    for (int i = 0; i < GetRowCount(); i++)
-      for (int j = 0; j < GetColumnCount(); j++) data_[i][j] = source[cnt++];
+    for (int i = 0; i < GetRowCount(); i++) {
+      for (int j = 0; j < GetColumnCount(); j++) {
+        data_[i][j] = source[cnt++];
+      } 
+    }
   }
 
   /**
@@ -223,15 +228,17 @@ class RowMatrixOperations {
    */
   static std::unique_ptr<RowMatrix<T>> Add(const RowMatrix<T> *matrixA, const RowMatrix<T> *matrixB) {
     // TODO(P0): Add implementation
-    if (matrixA->GetRowCount() != matrixB->GetRowCount() || matrixA->GetColumnCount() != matrixB->GetColumnCount())
+    if (matrixA->GetRowCount() != matrixB->GetRowCount() || matrixA->GetColumnCount() != matrixB->GetColumnCount()) {
       return std::unique_ptr<RowMatrix<T>>(nullptr);
+    }
 
     std::unique_ptr<RowMatrix<T>> ptr =
         std::make_unique<RowMatrix<T>>(matrixA->GetRowCount(), matrixA->GetColumnCount());
-    for (int i = 0; i < matrixA->GetRowCount(); i++)
-      for (int j = 0; j < matrixA->GetColumnCount(); j++)
+    for (int i = 0; i < matrixA->GetRowCount(); i++) {
+      for (int j = 0; j < matrixA->GetColumnCount(); j++) {
         ptr->SetElement(i, j, matrixA->GetElement(i, j) + matrixB->GetElement(i, j));
-
+      }
+    }
     return ptr;
   }
 
@@ -243,7 +250,9 @@ class RowMatrixOperations {
    * @return The result of matrix multiplication
    */
   static std::unique_ptr<RowMatrix<T>> Multiply(const RowMatrix<T> *matrixA, const RowMatrix<T> *matrixB) {
-    if (matrixA->GetColumnCount() != matrixB->GetRowCount()) return std::unique_ptr<RowMatrix<T>>(nullptr);
+    if (matrixA->GetColumnCount() != matrixB->GetRowCount()) {
+      return std::unique_ptr<RowMatrix<T>>(nullptr);
+    }
 
     int row = matrixA->GetRowCount();
     int col = matrixB->GetColumnCount();
@@ -252,7 +261,8 @@ class RowMatrixOperations {
     for (int i = 0; i < row; i++) {
       for (int j = 0; j < col; j++) {
         T val = 0;
-        int cnt_a = 0, cnt_b = 0;
+        int cnt_a = 0;
+        int cnt_b = 0;
 
         for (int k = 0; k < matrixA->GetColumnCount(); k++) {
           val += matrixA->GetElement(i, cnt_a++) * matrixB->GetElement(cnt_b++, j);
@@ -275,10 +285,13 @@ class RowMatrixOperations {
   static std::unique_ptr<RowMatrix<T>> GEMM(const RowMatrix<T> *matrixA, const RowMatrix<T> *matrixB,
                                             const RowMatrix<T> *matrixC) {
     // TODO(P0): Add implementation
-    if (matrixA->GetColumnCount() != matrixB->GetRowCount()) return std::unique_ptr<RowMatrix<T>>(nullptr);
-
-    if (matrixA->GetRowCount() != matrixC->GetRowCount() || matrixB->GetColumnCount() != matrixC->GetColumnCount())
+    if (matrixA->GetColumnCount() != matrixB->GetRowCount()) {
       return std::unique_ptr<RowMatrix<T>>(nullptr);
+    }
+
+    if (matrixA->GetRowCount() != matrixC->GetRowCount() || matrixB->GetColumnCount() != matrixC->GetColumnCount()) {
+      return std::unique_ptr<RowMatrix<T>>(nullptr);
+    }
 
     std::unique_ptr<RowMatrix<T>> mul = Multiply(matrixA, matrixB);
     RowMatrix<T> *tmp = mul.get();
