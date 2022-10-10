@@ -189,7 +189,7 @@ class RowMatrix : public Matrix<T> {
     for (int i = 0; i < GetRowCount(); i++) {
       for (int j = 0; j < GetColumnCount(); j++) {
         data_[i][j] = source[cnt++];
-      } 
+      }
     }
   }
 
