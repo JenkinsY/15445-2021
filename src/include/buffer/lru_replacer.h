@@ -47,6 +47,13 @@ class LRUReplacer : public Replacer {
 
  private:
   // TODO(student): implement me!
+<<<<<<< HEAD
+=======
+  size_t capacity_;
+  std::list<frame_id_t> lru_list_;
+  std::unordered_map<frame_id_t, std::list<frame_id_t>::iterator> lru_hash_;
+  std::mutex mutex_;
+>>>>>>> 1e262f3... lab1 task1 PasstestPro
 };
 
 }  // namespace bustub
