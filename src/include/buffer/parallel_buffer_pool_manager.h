@@ -13,6 +13,7 @@
 #pragma once
 
 #include "buffer/buffer_pool_manager.h"
+#include "buffer/buffer_pool_manager_instance.h"
 #include "recovery/log_manager.h"
 #include "storage/disk/disk_manager.h"
 #include "storage/page/page.h"
@@ -86,5 +87,20 @@ class ParallelBufferPoolManager : public BufferPoolManager {
    * Flushes all the pages in the buffer pool to disk.
    */
   void FlushAllPgsImp() override;
+
+  /** 实例的数量 */
+  size_t num_instances_;
+  /** 每个实例的容量 */
+  size_t pool_size_;
+  /** 下一个新页需要放的池子编号*/
+  size_t next_instance_;
+  /** 锁 */
+  std::mutex latch_;
+  /** 实例s */
+  std::vector<BufferPoolManagerInstance *> managers_;
+  /** Pointer to the disk manager. */
+  DiskManager *disk_manager_ __attribute__((__unused__));
+  /** Pointer to the log manager. */
+  LogManager *log_manager_ __attribute__((__unused__));
 };
 }  // namespace bustub
