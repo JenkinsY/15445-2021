@@ -14,19 +14,6 @@
 
 namespace bustub {
 
-<<<<<<< HEAD
-LRUReplacer::LRUReplacer(size_t num_pages) {}
-
-LRUReplacer::~LRUReplacer() = default;
-
-bool LRUReplacer::Victim(frame_id_t *frame_id) { return false; }
-
-void LRUReplacer::Pin(frame_id_t frame_id) {}
-
-void LRUReplacer::Unpin(frame_id_t frame_id) {}
-
-size_t LRUReplacer::Size() { return 0; }
-=======
 LRUReplacer::LRUReplacer(size_t num_pages) {
   capacity_ = num_pages;
   lru_list_.clear();
@@ -75,6 +62,5 @@ void LRUReplacer::Unpin(frame_id_t frame_id) {
 }
 
 size_t LRUReplacer::Size() { return lru_list_.size(); }
->>>>>>> 1e262f3... lab1 task1 PasstestPro
 
 }  // namespace bustub
