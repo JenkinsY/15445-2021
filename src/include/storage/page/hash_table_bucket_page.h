@@ -133,6 +133,16 @@ class HashTableBucketPage {
   bool IsEmpty();
 
   /**
+   * Get a copy array from bucket's array_
+   */
+  MappingType *GetArrayCopy();
+
+  /**
+   * Clear the bucket
+   */
+  void Clear();
+
+  /**
    * Prints the bucket's occupancy information
    */
   void PrintBucket();
@@ -142,7 +152,7 @@ class HashTableBucketPage {
   char occupied_[(BUCKET_ARRAY_SIZE - 1) / 8 + 1];
   // 0 if tombstone/brand new (never occupied), 1 otherwise.
   char readable_[(BUCKET_ARRAY_SIZE - 1) / 8 + 1];
-  MappingType array_[0];
+  MappingType array_[BUCKET_ARRAY_SIZE];
 };
 
 }  // namespace bustub

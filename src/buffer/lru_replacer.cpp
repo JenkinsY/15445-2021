@@ -43,7 +43,6 @@ void LRUReplacer::Pin(frame_id_t frame_id) {
   }
   lru_list_.remove(frame_id);
   lru_hash_.erase(frame_id);
-  return;
 }
 
 void LRUReplacer::Unpin(frame_id_t frame_id) {

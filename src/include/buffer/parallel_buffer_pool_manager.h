@@ -12,6 +12,7 @@
 
 #pragma once
 
+#include <vector>
 #include "buffer/buffer_pool_manager.h"
 #include "buffer/buffer_pool_manager_instance.h"
 #include "recovery/log_manager.h"

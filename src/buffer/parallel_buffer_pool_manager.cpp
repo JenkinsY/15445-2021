@@ -21,17 +21,17 @@ ParallelBufferPoolManager::ParallelBufferPoolManager(size_t num_instances, size_
   num_instances_ = num_instances;
   pool_size_ = pool_size;
   next_instance_ = 0;
-  for (size_t i = 0; i < num_instances; ++ i) {
+  for (size_t i = 0; i < num_instances; ++i) {
     managers_.push_back(new BufferPoolManagerInstance(pool_size, num_instances_, i, disk_manager, log_manager));
   }
 }
 
 // Update constructor to destruct all BufferPoolManagerInstances and deallocate any associated memory
 ParallelBufferPoolManager::~ParallelBufferPoolManager() {
-  for (size_t i = 0; i < num_instances_; ++ i) {
+  for (size_t i = 0; i < num_instances_; ++i) {
     delete managers_[i];
   }
-};
+}
 
 size_t ParallelBufferPoolManager::GetPoolSize() {
   // Get size of all BufferPoolManagerInstances
@@ -58,7 +58,7 @@ bool ParallelBufferPoolManager::FlushPgImp(page_id_t page_id) {
   return GetBufferPoolManager(page_id)->FlushPage(page_id);
 }
 
-  //循环尝试在实例中增加新页，直到其中一个成功
+// 循环尝试在实例中增加新页，直到其中一个成功
 Page *ParallelBufferPoolManager::NewPgImp(page_id_t *page_id) {
   // create new page. We will request page allocation in a round robin manner from the underlying
   // BufferPoolManagerInstances
@@ -68,7 +68,7 @@ Page *ParallelBufferPoolManager::NewPgImp(page_id_t *page_id) {
   // is called
   std::scoped_lock lock{latch_};
 
-  for (size_t i = 0; i < num_instances_; ++ i) {
+  for (size_t i = 0; i < num_instances_; ++i) {
     auto manager = managers_[next_instance_];
     auto page = manager->NewPage(page_id);
     next_instance_ = (next_instance_ + 1) % num_instances_;
@@ -86,7 +86,7 @@ bool ParallelBufferPoolManager::DeletePgImp(page_id_t page_id) {
 
 void ParallelBufferPoolManager::FlushAllPgsImp() {
   // flush all pages from all BufferPoolManagerInstances
-  for (size_t i = 0; i < num_instances_; ++ i) {
+  for (size_t i = 0; i < num_instances_; ++i) {
     managers_[i]->FlushAllPages();
   }
 }
