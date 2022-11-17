@@ -37,7 +37,7 @@ uint32_t HashTableDirectoryPage::GetLocalDepthMask(uint32_t bucket_idx) {
 
 // 将目录复制一份放到末尾，没有进行数据迁移，两个bucket对应一个page
 void HashTableDirectoryPage::IncrGlobalDepth() {
-  for (int i = 0, new_idx = Size(); i < Size(); i++, new_idx++) {
+  for (uint32_t i = 0, new_idx = Size(); i < Size(); i++, new_idx++) {
     bucket_page_ids_[new_idx] = bucket_page_ids_[i];
     local_depths_[new_idx] = local_depths_[i];
   }

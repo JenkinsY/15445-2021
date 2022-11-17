@@ -153,14 +153,6 @@ MappingType *HASH_TABLE_BUCKET_TYPE::GetArrayCopy() {
   return copy;
 }
 
-// 清空当前bucket，在分裂时调用
-template <typename KeyType, typename ValueType, typename KeyComparator>
-void HASH_TABLE_BUCKET_TYPE::Clear() {
-  memset(occupied_, 0, sizeof(occupied_));
-  memset(readable_, 0, sizeof(readable_));
-  memset(array_, 0, sizeof(array_));
-}
-
 template <typename KeyType, typename ValueType, typename KeyComparator>
 void HASH_TABLE_BUCKET_TYPE::PrintBucket() {
   uint32_t size = 0;
