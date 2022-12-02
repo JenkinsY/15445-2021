@@ -126,6 +126,22 @@ template <typename KeyType, typename ValueType, typename KeyComparator>
 bool HASH_TABLE_TYPE::SplitInsert(Transaction *transaction, const KeyType &key, const ValueType &value) {
   HashTableDirectoryPage *dir_page = FetchDirectoryPage();
   table_latch_.WLock();
+  page_id_t split_bucket_page_id = KeyToPageId(key, dir_page);
+  HASH_TABLE_BUCKET_TYPE *split_bucket = FetchBucketPage(split_bucket_page_id);
+
+  // 分裂页加写锁
+  Page *split_page = reinterpret_cast<Page *>(split_bucket);
+  split_page->WLatch();
+
+  // 先再次确定需要分裂的桶页面是不是满的
+  if (!split_bucket->IsFull()) {
+    split_page->WUnlatch();
+    assert(buffer_pool_manager_->UnpinPage(split_bucket_page_id, false, nullptr));
+    assert(buffer_pool_manager_->UnpinPage(directory_page_id_, false, nullptr));
+    table_latch_.WUnlock();
+    return Insert(transaction, key, value);
+  }
+
   uint32_t split_bucket_index = KeyToDirectoryIndex(key, dir_page);
   uint32_t split_bucket_depth = dir_page->GetLocalDepth(split_bucket_index);
 
@@ -137,12 +153,7 @@ bool HASH_TABLE_TYPE::SplitInsert(Transaction *transaction, const KeyType &key, 
   // 增加local depth
   dir_page->IncrLocalDepth(split_bucket_index);
 
-  // 获取当前bucket，先将数据保存下来，然后重新初始化它
-  page_id_t split_bucket_page_id = KeyToPageId(key, dir_page);
-  HASH_TABLE_BUCKET_TYPE *split_bucket = FetchBucketPage(split_bucket_page_id);
-  Page *split_page = reinterpret_cast<Page *>(split_bucket);
-  split_page->WLatch();
-
+  // 将数据保存下来
   uint32_t origin_array_size = split_bucket->NumReadable();
   MappingType *origin_array = split_bucket->GetArrayCopy();
 
@@ -182,16 +193,16 @@ bool HASH_TABLE_TYPE::SplitInsert(Transaction *transaction, const KeyType &key, 
 
   // 重新插入数据
   for (uint32_t i = 0; i < origin_array_size; i++) {
-    // 先将原bucket中对应的数清除
-    split_bucket->Remove(origin_array[i].first, origin_array[i].second, comparator_);
+    // 根据新计算的hash结果找到应该插入的桶页面
     page_id_t target_bucket_page_id = KeyToPageId(origin_array[i].first, dir_page);
+
+    // 判断是否要将数据抹除插入新bucket
     assert(target_bucket_page_id == split_bucket_page_id || target_bucket_page_id == image_bucket_page_id);
-    // 这里根据新计算的hash结果决定插入哪个bucket
     if (target_bucket_page_id == split_bucket_page_id) {
-      split_bucket->Insert(origin_array[i].first, origin_array[i].second, comparator_);
-    } else {
-      image_bucket->Insert(origin_array[i].first, origin_array[i].second, comparator_);
+      continue;
     }
+    split_bucket->Remove(origin_array[i].first, origin_array[i].second, comparator_);
+    image_bucket->Insert(origin_array[i].first, origin_array[i].second, comparator_);
   }
   delete[] origin_array;
 
@@ -226,8 +237,8 @@ bool HASH_TABLE_TYPE::Remove(Transaction *transaction, const KeyType &key, const
   if (bucket->IsEmpty()) {
     // Unpin
     p->WUnlatch();
-    assert(buffer_pool_manager_->UnpinPage(directory_page_id_, true, nullptr));
-    assert(buffer_pool_manager_->UnpinPage(bucket_page_id, false, nullptr));
+    assert(buffer_pool_manager_->UnpinPage(directory_page_id_, false, nullptr));
+    assert(buffer_pool_manager_->UnpinPage(bucket_page_id, true, nullptr));
     table_latch_.RUnlock();
     Merge(transaction, key, value);
     return res;
