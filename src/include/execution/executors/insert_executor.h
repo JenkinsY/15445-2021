@@ -56,9 +56,14 @@ class InsertExecutor : public AbstractExecutor {
   /** @return The output schema for the insert */
   const Schema *GetOutputSchema() override { return plan_->OutputSchema(); };
 
+  void InsertIntoTableWithIndex(Tuple *tuple);
+
  private:
   /** The insert plan node to be executed*/
   const InsertPlanNode *plan_;
+  TableInfo *table_info_;
+  TableHeap *table_heap_;
+  std::unique_ptr<AbstractExecutor> child_executor_;
 };
 
 }  // namespace bustub
