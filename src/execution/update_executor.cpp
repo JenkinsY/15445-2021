@@ -32,8 +32,18 @@ bool UpdateExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) {
   Tuple old_tuple;
   Tuple new_tuple;
   RID tuple_rid;
+  Transaction *transaction = GetExecutorContext()->GetTransaction();
+  LockManager *lock_mgr = GetExecutorContext()->GetLockManager();
   // 执行子查询
   while (child_executor_->Next(&old_tuple, &tuple_rid)) {
+    // 加锁
+    if (lock_mgr != nullptr) {
+      if (transaction->IsSharedLocked(tuple_rid)) {
+        lock_mgr->LockUpgrade(transaction, tuple_rid);
+      } else if (!transaction->IsExclusiveLocked(tuple_rid)) {
+        lock_mgr->LockExclusive(transaction, tuple_rid);
+      }
+    }
     new_tuple = GenerateUpdatedTuple(old_tuple);
     table_info_->table_->UpdateTuple(new_tuple, tuple_rid, exec_ctx_->GetTransaction());
 
@@ -45,6 +55,15 @@ bool UpdateExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) {
       auto new_key_tuple =
           new_tuple.KeyFromTuple(table_info_->schema_, *index->index_->GetKeySchema(), index->index_->GetKeyAttrs());
       index->index_->InsertEntry(new_key_tuple, tuple_rid, exec_ctx_->GetTransaction());
+      // 在事务中记录下变更
+      IndexWriteRecord write_record(tuple_rid, table_info_->oid_, WType::DELETE, new_tuple, index->index_oid_,
+                                    exec_ctx_->GetCatalog());
+      write_record.old_tuple_ = old_tuple;
+      transaction->GetIndexWriteSet()->emplace_back(write_record);
+    }
+    // 解锁
+    if (transaction->GetIsolationLevel() == IsolationLevel::READ_COMMITTED && lock_mgr != nullptr) {
+      lock_mgr->Unlock(transaction, tuple_rid);
     }
   }
   return false;

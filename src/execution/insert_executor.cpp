@@ -52,12 +52,29 @@ void InsertExecutor::InsertIntoTableWithIndex(Tuple *tuple) {
   // 调用table_heap，插入记录
   RID cur_rid;
   table_heap_->InsertTuple(*tuple, &cur_rid, exec_ctx_->GetTransaction());
+  // 加锁
+  Transaction *transaction = GetExecutorContext()->GetTransaction();
+  LockManager *lock_mgr = GetExecutorContext()->GetLockManager();
+  if (lock_mgr != nullptr) {
+    if (transaction->IsSharedLocked(cur_rid)) {
+      lock_mgr->LockUpgrade(transaction, cur_rid);
+    } else if (!transaction->IsExclusiveLocked(cur_rid)) {
+      lock_mgr->LockExclusive(transaction, cur_rid);
+    }
+  }
   // 更新索引
   auto indexes = exec_ctx_->GetCatalog()->GetTableIndexes(table_info_->name_);
   for (const auto &index : indexes) {
     auto key_tuple =
         tuple->KeyFromTuple(table_info_->schema_, *index->index_->GetKeySchema(), index->index_->GetKeyAttrs());
     index->index_->InsertEntry(key_tuple, cur_rid, exec_ctx_->GetTransaction());
+    // 在事务中记录下变更
+    transaction->GetIndexWriteSet()->emplace_back(IndexWriteRecord(
+        cur_rid, table_info_->oid_, WType::INSERT, *tuple, index->index_oid_, exec_ctx_->GetCatalog()));
+  }
+  // 解锁
+  if (transaction->GetIsolationLevel() == IsolationLevel::READ_COMMITTED && lock_mgr != nullptr) {
+    lock_mgr->Unlock(transaction, cur_rid);
   }
 }
 

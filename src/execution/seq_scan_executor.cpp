@@ -35,12 +35,29 @@ bool SeqScanExecutor::Next(Tuple *tuple, RID *rid) {
   while (iter_ != table_heap_->End()) {
     auto table_tuple = *iter_;
     RID origin_rid = iter_->GetRid();
+
+    // 加锁
+    LockManager *lock_mgr = GetExecutorContext()->GetLockManager();
+    Transaction *txn = GetExecutorContext()->GetTransaction();
+    if (lock_mgr != nullptr) {
+      if (txn->GetIsolationLevel() != IsolationLevel::READ_UNCOMMITTED) {
+        if (!txn->IsSharedLocked(origin_rid) && !txn->IsExclusiveLocked(origin_rid)) {
+          lock_mgr->LockShared(txn, origin_rid);
+        }
+      }
+    }
+
     std::vector<Value> res;
 
     // 遍历输出的列，把该行的数据提出来（跳过不需要的列对应的单元格数据）
     for (const auto &col : out_schema->GetColumns()) {
       Value value = col.GetExpr()->Evaluate(&table_tuple, &table_schema);
       res.emplace_back(value);
+    }
+
+    // 解锁
+    if (txn->GetIsolationLevel() == IsolationLevel::READ_COMMITTED && lock_mgr != nullptr) {
+      lock_mgr->Unlock(txn, origin_rid);
     }
 
     // 迭代器+1
